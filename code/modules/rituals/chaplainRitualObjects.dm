@@ -40,7 +40,7 @@
 	icon_state = "sprite-arcane"
 	density = 0
 	opacity = 0
-	anchored = 1
+	anchored = ANCHORED
 	layer = EFFECTS_LAYER_4
 	var/datum/spriteType/spriteType = null
 	var/health = 33
@@ -187,7 +187,7 @@
 /obj/chaplainStuff/tentacle
 	density = 0
 	opacity = 0
-	anchored = 1
+	anchored = ANCHORED
 	layer = EFFECTS_LAYER_4
 	name = ""
 	icon = 'icons/misc/chaplainRitual.dmi'
@@ -209,7 +209,7 @@
 /obj/chaplainStuff/ritualeffect
 	density = 0
 	opacity = 0
-	anchored = 1
+	anchored = ANCHORED
 	name = ""
 	icon = 'icons/misc/chaplainRitual.dmi'
 	icon_state = "empty"
@@ -218,7 +218,7 @@
 	proc/show(var/loc, var/istate = "magic", var/duration = 50, var/rPlane = 0)
 		src.plane = rPlane
 		src.set_loc(loc)
-		flick(istate, src)
+		FLICK(istate, src)
 		SPAWN(duration)
 			src.set_loc(null)
 			qdel(src)
@@ -226,7 +226,7 @@
 /obj/chaplainStuff/ritualeffectbig
 	density = 0
 	opacity = 0
-	anchored = 1
+	anchored = ANCHORED
 	pixel_x = -64
 	pixel_y = -64
 	name = ""
@@ -236,7 +236,7 @@
 	proc/show(var/loc, var/istate = "ritualeffect", var/duration = 200, var/rPlane = 0)
 		src.plane = rPlane
 		src.set_loc(loc)
-		flick(istate, src)
+		FLICK(istate, src)
 		SPAWN(duration)
 			src.set_loc(null)
 			qdel(src)
@@ -270,7 +270,7 @@
 /obj/chaplainStuff/darkness
 	density = 0
 	opacity = 1
-	anchored = 1
+	anchored = ANCHORED
 	layer = NOLIGHT_EFFECTS_LAYER_4
 
 	name = "darkness"
@@ -804,7 +804,7 @@ obj/eldritch_altar
 	icon = 'icons/obj/spooky.dmi'
 	icon_state = "altar-sleep"
 	density = 1
-	anchored = 0
+	anchored = UNANCHORED
 	flags = NOSPLASH
 	event_handler_flags = USE_FLUID_ENTER
 	layer = OBJ_LAYER-0.1
@@ -956,7 +956,7 @@ obj/eldritch_altar
 			// SPAWN(2 SECONDS)
 			// 	active = 0
 			return
-		flick("altar-awake", src)
+		FLICK("altar-awake", src)
 		//here we loop through all the offerings and tally them.
 		var/tally_strength = 0
 		var/tally_spacebux = 0

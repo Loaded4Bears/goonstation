@@ -152,7 +152,7 @@ TYPEINFO(/obj/item/device/chameleon)
 			cham.icon = testIcon
 			cham.set_dir(target.dir)
 			can_use = 1
-			tooltip_rebuild = 1
+			tooltip_rebuild = TRUE
 		else
 			user.show_text("\The [target] is not compatible with the scanner.", "red")
 
@@ -171,7 +171,7 @@ TYPEINFO(/obj/item/device/chameleon)
 			cham.set_loc(src)
 			boutput(user, SPAN_NOTICE("You deactivate the [src]."))
 			anim.set_loc(get_turf(src))
-			flick("emppulse",anim)
+			FLICK("emppulse",anim)
 			SPAWN(0.8 SECONDS)
 				anim.set_loc(src)
 		else
@@ -187,7 +187,7 @@ TYPEINFO(/obj/item/device/chameleon)
 
 			boutput(user, SPAN_NOTICE("You activate the [src]."))
 			anim.set_loc(get_turf(src))
-			flick("emppulse",anim)
+			FLICK("emppulse",anim)
 			SPAWN(0.8 SECONDS)
 				anim.set_loc(src)
 
@@ -199,10 +199,10 @@ TYPEINFO(/obj/item/device/chameleon)
 				A.set_loc(get_turf(cham))
 			cham.set_loc(src)
 			can_use = 0
-			tooltip_rebuild = 1
+			tooltip_rebuild = TRUE
 			SPAWN(10 SECONDS)
 				can_use = 1
-				tooltip_rebuild = 1
+				tooltip_rebuild = TRUE
 
 /obj/item/device/chameleon/bomb
 	name = "chameleon bomb"

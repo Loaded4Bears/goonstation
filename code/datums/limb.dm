@@ -9,6 +9,8 @@
 	var/obj/item/parts/holder = null
 	/// used for ON_COOLDOWN stuff
 	var/cooldowns
+	/// this limb's click usage is limited by lastattacked. set to false for custom cooldowns.
+	var/use_lastattacked_click_delay = TRUE
 	var/special_next = 0
 	/// Contains the datum which executes the items special, if it has one, when used beyond melee range.
 	var/datum/item_special/disarm_special = null
@@ -23,6 +25,9 @@
 	var/can_beat_up_robots = FALSE
 	/// Bypass to allow special attacks to work on help/grab intent, kind of dumb but necessary
 	var/use_specials_on_all_intents = FALSE
+	/// Exemptions on what it can used/help by the limb
+	var/list/interact_exemptions = list()
+	var/exempt = FALSE // For specific items which are heavier yet carriable, has to be here cause of critter.dm checks
 
 	New(var/obj/item/parts/holder)
 		..()
@@ -292,7 +297,7 @@
 
 	shoot(atom/target, var/mob/user, var/pointblank = FALSE, params)
 		if((..() && istype(user.loc, /turf/space) || user.no_gravity) && src.has_space_pushback)
-			user.inertia_dir = get_dir(target, user)
+			user.inertia_dir = get_dir_accurate(target, user)
 			step(user, user.inertia_dir)
 
 	arm38
@@ -343,7 +348,7 @@
 		spread_angle = 15
 
 	artillery
-		proj = new/datum/projectile/bullet/autocannon
+		proj = new/datum/projectile/special/spreader/uniform_burst/circle/airburst
 		shots = 1
 		current_shots = 1
 		cooldown = 5 SECONDS
@@ -385,8 +390,8 @@
 		cooldown = 4 SECONDS
 		reload_time = 4 SECONDS
 
-	ice_phoenix
-		proj = new/datum/projectile/bullet/ice_phoenix_icicle
+	space_phoenix
+		proj = new/datum/projectile/bullet/space_phoenix_icicle
 		shots = INFINITY
 		current_shots = 1
 		cooldown = 1 SECOND
@@ -1474,7 +1479,7 @@
 
 			msgs.played_sound = 'sound/misc/hastur/tentacle_hit.ogg'
 			msgs.damage = rand(8, 17)
-			flick("hastur-attack", user)
+			FLICK("hastur-attack", user)
 			msgs.damage_type = DAMAGE_CUT // Nasty tentacles with sharp spikes!
 
 		else
@@ -1492,7 +1497,7 @@
 		else if (send_flying == 1)
 			msgs.after_effects += /proc/wrestler_knockdown
 
-		logTheThing(LOG_COMBAT, user, "punches [constructTarget(target,"combat")] with [src.weak == 1 ? "werewolf" : "abomination"] arms at [log_loc(user)].")
+		logTheThing(LOG_COMBAT, user, "punches [constructTarget(target,"combat")] with [src.weak == 1 ? "werewolf" : "abomination"] arms for [msgs.damage] damage at [log_loc(user)].")
 		user.attack_effects(target, user.zone_sel?.selecting)
 		msgs.flush(SUPPRESS_LOGS)
 
@@ -1697,7 +1702,7 @@
 		user.lastattacked = get_weakref(target)
 
 
-/// little critters with teeth, like mice! can pick up small items only.
+/// little critters with teeth, like mice! can pick up small items only. There are some checks in critter.dm, which might need to be updated with whatever you edit here.
 /datum/limb/small_critter
 	var/max_wclass = W_CLASS_TINY // biggest thing we can carry
 	var/dam_low = 1
@@ -1721,15 +1726,25 @@
 				var/obj/item/O = target
 				var/can_pickup = 1
 
+				for (var/type in src.interact_exemptions)
+					if (istype(O, type))
+						exempt = TRUE
+						..()
+						return
+
 				if (issmallanimal(user))
 					var/mob/living/critter/small_animal/C = user
 					if (C.ghost_spawned && HAS_FLAG(O.object_flags, NO_GHOSTCRITTER))
 						can_pickup = 0
-
-				if (O.w_class > max_wclass || !can_pickup)
+				if (O.w_class > max_wclass || !can_pickup && !exempt)
 					user.visible_message(SPAN_COMBAT("<b>[user] struggles, failing to lift [target] off the ground!</b>"), SPAN_COMBAT("<b>You struggle with [target], but it's too big for you to lift!</b>"))
 					return
 			else
+				for (var/type in src.interact_exemptions)
+					if (istype(target, type))
+						exempt = TRUE
+						..()
+						return
 				if (issmallanimal(user))
 					var/mob/living/critter/small_animal/C = user
 					var/obj/O = target
@@ -1751,6 +1766,7 @@
 					playsound(user.loc, 'sound/impact_sounds/Generic_Shove_1.ogg', 25, 1, -1)
 					return
 		..()
+
 
 	//yeah they're not ACTUALLY biting them but let's just assume that they are because i don't want a mouse or a dog to KO someone with a brutal right hook
 	// changed to scratching, small mouths will take care of biting
@@ -1802,6 +1818,12 @@
 					return
 		..()
 
+/datum/limb/small_critter/mail
+	interact_exemptions = list(/obj/item/random_mail)
+
+	grab(mob/target, mob/living/user)
+		user.visible_message("<b>[user] scrabbles pathetically at [target]!</b>")
+
 /// same as the parent, but can pick up some heavier shit
 /datum/limb/small_critter/med
 	max_wclass = W_CLASS_SMALL
@@ -1824,7 +1846,7 @@
 	dam_low = 0
 	dam_high = 0
 
-/datum/limb/small_critter/ice_phoenix
+/datum/limb/small_critter/space_phoenix
 	dam_low = 5
 	dam_high = 10
 	dmg_type = DAMAGE_CUT

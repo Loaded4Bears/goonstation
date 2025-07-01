@@ -142,6 +142,8 @@
 	APCWireColorToFlag = RandomAPCWires()
 	Z_LOG_DEBUG("World/Init", "Loading fishing spots...")
 	global.initialise_fishing_spots()
+	Z_LOG_DEBUG("World/Init", "Calculating shipping throw distance...")
+	global.shippingmarket.init()
 
 	//QM Categories by ZeWaka
 	build_qm_categories()
@@ -151,6 +153,11 @@
 	Z_LOG_DEBUG("World/Init", "Setting up mining level...")
 	makeMiningLevel()
 	#endif
+
+	UPDATE_TITLE_STATUS("Loading crime")
+	Z_LOG_DEBUG("World/Init", "Loading listening post...")
+	load_listening_post()
+	makepowernets()
 
 	if (derelict_mode)
 		Z_LOG_DEBUG("World/Init", "Derelict mode stuff")
@@ -229,11 +236,6 @@
 	for (var/thing in by_cat[TR_CAT_DELETE_ME])
 		qdel(thing)
 	#endif
-
-#ifdef MOVING_SUB_MAP
-	Z_LOG_DEBUG("World/Init", "Making Manta start moving...")
-	mantaSetMove(moving=1, doShake=0)
-#endif
 
 #ifdef TWITCH_BOT_ALLOWED
 	for (var/client/C)

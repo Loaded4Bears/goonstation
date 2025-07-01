@@ -240,7 +240,15 @@
 		ASSERT(src.name)
 		..()
 
-	proc/preventAddTrait(mob/owner, var/resolved_role)
+	/// Returns TRUE if a trait should NOT be added to a mob.
+	proc/preventAddTrait(mob/owner, resolved_role)
+		if (resolved_role == "tutorial")
+			for (var/trait_cateogry in src.category)
+				if (trait_cateogry == "species")
+					return FALSE
+				if (trait_cateogry == "language")
+					return FALSE
+			return TRUE
 		. = FALSE
 
 	proc/onAdd(var/mob/owner)
@@ -709,6 +717,27 @@
 	category = list("skill")
 	points = -1
 
+/datum/trait/anti_headpat
+	name = "Touch Shy"
+	id = "touchshy"
+	desc = "You really don't like people touching your head (or anywhere else), and will reflexively shove anyone who tries."
+	icon_state = "touchshy"
+	category = list("skill")
+	points = -1
+
+	onAdd(mob/owner)
+		. = ..()
+		RegisterSignal(owner, COMSIG_ATTACKHAND, PROC_REF(defend_personal_space))
+
+	onRemove(mob/owner)
+		. = ..()
+		UnregisterSignal(owner, COMSIG_ATTACKHAND)
+
+	proc/defend_personal_space(mob/owner, mob/target)
+		if(owner != target && can_act(owner) && target.a_intent == INTENT_HELP)
+			owner.disarm(target, is_special = TRUE)
+			playsound(owner, 'sound/impact_sounds/Generic_Swing_1.ogg', 50, TRUE)
+
 /* Hey dudes, I moved these over from the old bioEffect/Genetics system so they work on clone */
 
 ABSTRACT_TYPE(/datum/trait/job)
@@ -1139,6 +1168,43 @@ TYPEINFO(/datum/trait/partyanimal)
 	disability_name = "Clone Instability"
 	disability_desc = "Genetic structure incompatible with cloning"
 
+/datum/trait/cyber_incompatible
+	name = "Cyber-Incompatible"
+	desc = "All cybernetic limbs and organs will fail, including cyborgification."
+	id = "cyber_incompatible"
+	icon_state = "cyber_incompatible"
+	points = 1
+	disability_type = TRAIT_DISABILITY_MAJOR
+	disability_name = "Cybernetics Incompatibility"
+	disability_desc = "Patient is incompatible with all forms of cybernetic augmentation, including cyborgification."
+
+	onAdd(mob/owner)
+		. = ..()
+		var/mob/living/carbon/human/H = owner
+		H.organHolder?.brain?.cyber_incompatible = TRUE
+
+	onLife(mob/owner, mult)
+		. = ..()
+		var/mob/living/carbon/human/H = owner
+		var/cyber_rejected = FALSE
+		for (var/obj/item/parts/P in list(H.limbs.l_arm, H.limbs.r_arm, H.limbs.l_leg, H.limbs.r_leg))
+			if (isrobolimb(P))
+				boutput(H, SPAN_ALERT("Your body is incompatible with [P] and rejects it!"))
+				P.sever()
+				cyber_rejected = TRUE
+		for (var/organ_slot in H.organHolder.organ_list)
+			var/obj/item/organ/O = H.organHolder.organ_list[organ_slot]
+			if (istype(O) && O.robotic)
+				boutput(H, SPAN_ALERT("Your body is incompatible with [O] and rejects it!"))
+				H.organHolder.drop_and_throw_organ(O)
+				cyber_rejected = TRUE
+		if (cyber_rejected)
+			H.visible_message(SPAN_ALERT("[H]'s body convulses for a moment as it rejects the cybernetic augments!"))
+			elecflash(H, exclude_center=FALSE)
+			H.force_laydown_standup()
+			violent_standup_twitch(H) // duping vamp fx on purpose to increase vampire ambiguity
+			playsound(H.loc, 'sound/effects/bones_break.ogg', 60, 1)
+
 /datum/trait/survivalist
 	name = "Survivalist"
 	desc = "Food will heal you even if you are badly injured."
@@ -1228,6 +1294,27 @@ TYPEINFO(/datum/trait/partyanimal)
 	icon_state = "clutz"
 	points = 2
 	afterlife_blacklisted = TRUE
+
+/datum/trait/butterfingers
+	name = "Butterfingers"
+	desc = "You have difficulty keeping hold of things."
+	id = "butterfingers"
+	icon_state = "butterfingers"
+	points = 2
+	afterlife_blacklisted = TRUE
+
+	onLife(var/mob/owner, var/mult)
+		if(!can_act(owner) || !istype(owner))
+			return
+		if(!probmult(10))
+			return
+		var/obj/item/target_item = owner.equipped() //prioritise actively held items
+		if(!target_item)
+			target_item = owner.find_type_in_hand(/obj/item)
+		if(!target_item || target_item.cant_drop)
+			return
+		owner.drop_item(target_item)
+		owner.visible_message(SPAN_ALERT("<b>[owner.name]</b> accidentally drops [target_item]!"))
 
 /datum/trait/leftfeet
 	name = "Two left feet"
@@ -1415,6 +1502,11 @@ TYPEINFO(/datum/trait/partyanimal)
 	category = list("body", "nohair","nowig")
 	icon_state = "hair"
 
+	preventAddTrait(mob/owner, resolved_role)
+		. = ..()
+		if (resolved_role == "tutorial")
+			. = FALSE
+
 	onAdd(mob/owner)
 		owner.bioHolder.AddEffect("hair_growth", innate = TRUE)
 
@@ -1457,3 +1549,15 @@ TYPEINFO(/datum/trait/partyanimal)
 		if(ishuman(owner) && prob(10))
 			var/mob/living/carbon/human/H = owner
 			randomize_mob_limbs(H)
+
+// organ removal associated traits
+// removal is handled in part customization, tracked here for equipping sensory item
+/datum/trait/missing_left_eye
+	name = "Missing Left Eye"
+	id = "eye_missing_left"
+	unselectable = TRUE
+
+/datum/trait/missing_right_eye
+	name = "Missing Right Eye"
+	id = "eye_missing_right"
+	unselectable = TRUE

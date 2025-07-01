@@ -222,7 +222,7 @@ TYPEINFO(/obj/machinery/portable_atmospherics/pressurizer)
 			var/obj/item/satchel/S = I
 			for(var/obj/item/O in S.contents) O.set_loc(src)
 			S.UpdateIcon()
-			S.tooltip_rebuild = 1
+			S.tooltip_rebuild = TRUE
 			user.visible_message("<b>[user.name]</b> dumps out [S] into [src].")
 			return
 		if (length(I.storage?.get_contents()))
@@ -278,7 +278,7 @@ TYPEINFO(/obj/machinery/portable_atmospherics/pressurizer)
 						air_contents.oxygen/TOTAL_MOLES(air_contents)*255,	\
 						air_contents.oxygen+air_contents.toxins/TOTAL_MOLES(air_contents)*255)
 		poof.alpha = clamp(MIXTURE_PRESSURE(src.air_contents)/src.maximum_pressure*180, 90, 220)
-		flick("pressurizer-poof", poof)
+		FLICK("pressurizer-poof", poof)
 		SPAWN(0.8 SECONDS)
 			if(poof) qdel(poof)
 

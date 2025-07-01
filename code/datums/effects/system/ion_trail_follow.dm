@@ -21,10 +21,10 @@
 	var/has_afterburner = FALSE
 	if (istype(vehicle, /obj/machinery/vehicle))
 		var/obj/machinery/vehicle/mover = vehicle
-		if (istype(mover.sec_system, /obj/item/shipcomponent/secondary_system/trailblazer))
+		if(istype(mover.get_part(POD_PART_SECONDARY), /obj/item/shipcomponent/secondary_system/trailblazer))
 			has_trailblazer = TRUE
-		else if (istype(mover.sec_system, /obj/item/shipcomponent/secondary_system/thrusters/afterburner))
-			var/obj/item/shipcomponent/secondary_system/thrusters/afterburner/afterburner = mover.sec_system
+		else if(istype(mover.get_part(POD_PART_SECONDARY), /obj/item/shipcomponent/secondary_system/thrusters/afterburner))
+			var/obj/item/shipcomponent/secondary_system/thrusters/afterburner/afterburner = mover.get_part(POD_PART_SECONDARY)
 			has_afterburner = afterburner.active
 	if(T != src.oldposition)
 		if(istype(oldposition, /turf) && istype(T, /turf/space) || (istype(vehicle, /obj/machinery/vehicle) && (istype(T, /turf/simulated) && T:allows_vehicles)) )
@@ -36,7 +36,7 @@
 						if (has_afterburner)
 							I.color = "#ff09de"
 						src.oldposition.vis_contents += I
-						flick(istate, I)
+						FLICK(istate, I)
 						I.icon_state = "blank"
 					else
 						I = new /atom/movable/hotspot/chemfire(src.oldposition, CHEM_FIRE_BLUE)

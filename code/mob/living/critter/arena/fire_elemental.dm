@@ -1,6 +1,5 @@
 /mob/living/critter/fire_elemental
 	name = "fire elemental"
-	real_name = "fire elemental"
 	desc = "You can't tell if this person is on fire, or made of it. Or both."
 	icon = 'icons/mob/critter/humanoid/elemental/fire.dmi'
 	icon_state = "fire_elemental"
@@ -107,7 +106,7 @@
 
 	on_launch(var/obj/projectile/P)
 		P.layer = EFFECTS_LAYER_BASE
-		// flick("ember",P)
+		// FLICK("ember",P)
 		P.special_data["returned"] = FALSE
 
 		..()

@@ -117,7 +117,7 @@
 		if(user)
 			boutput(user, SPAN_NOTICE("You [locked ? "lock" : "unlock"] the mulebot's controls!"))
 
-		flick("mulebot-emagged", src)
+		FLICK("mulebot-emagged", src)
 		playsound(src.loc, 'sound/effects/sparks1.ogg', 100, 0)
 		return 1
 
@@ -706,7 +706,7 @@
 	bump(var/atom/obs)
 		if(ismob(obs))
 			var/mob/M = obs
-			if(M.traitHolder.hasTrait("wasitsomethingisaid")) //tee hee
+			if(M.traitHolder?.hasTrait("wasitsomethingisaid")) //tee hee
 				knock_over_mob(M)
 			if(!(wires & wire_mobavoid))		//usually just bumps, but if avoidance disabled knock over mobs
 				knock_over_mob(M)

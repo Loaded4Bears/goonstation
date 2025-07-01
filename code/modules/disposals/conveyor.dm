@@ -358,7 +358,7 @@ TYPEINFO(/obj/machinery/conveyor) {
 			dir_out_char = "W"
 
 
-	if (operating == CONVEYOR_STOPPED || operating == CONVEYOR_FORWARD)
+	if (operating == null || operating == CONVEYOR_STOPPED || operating == CONVEYOR_FORWARD)
 		new_icon += dir_in_char + dir_out_char
 	else if (operating == CONVEYOR_REVERSE)
 		new_icon += dir_out_char + dir_in_char
@@ -859,12 +859,12 @@ TYPEINFO(/obj/machinery/conveyor) {
 	use_power(50)
 	operating = 1
 	if(deployed)
-		flick("diverter10",src)
+		FLICK("diverter10",src)
 		icon_state = "diverter0"
 		sleep(1 SECOND)
 		deployed = 0
 	else
-		flick("diverter01",src)
+		FLICK("diverter01",src)
 		icon_state = "diverter1"
 		sleep(1 SECOND)
 		deployed = 1

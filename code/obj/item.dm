@@ -101,7 +101,7 @@ ABSTRACT_TYPE(/obj/item)
 	var/tmp/lastTooltipDist = null
 	var/tmp/lastTooltipUser = null
 	var/tmp/lastTooltipSpectro = null
-	var/tmp/tooltip_rebuild = 1
+	var/tmp/tooltip_rebuild = TRUE
 
 	var/tmp/inventory_counter_enabled = 0 // Inventory count display. Call create_inventory_counter in New()
 	var/tmp/obj/overlay/inventory_counter/inventory_counter = null
@@ -233,7 +233,7 @@ ABSTRACT_TYPE(/obj/item)
 			 || (HAS_ATOM_PROPERTY(usr, PROP_MOB_SPECTRO) && tooltip_flags & REBUILD_SPECTRO)\
 			 || (usr != lastTooltipUser && tooltip_flags & REBUILD_USER)\
 			 || (GET_DIST(src, usr) != lastTooltipDist && tooltip_flags & REBUILD_DIST))
-				tooltip_rebuild = 1
+				tooltip_rebuild = TRUE
 
 			//If user has tooltips to always show, and the item is in world, and alt key is NOT pressed, deny
 			//z == 0 seems to be a good way to check if something is inworld or not... removed some ismob checks.
@@ -268,7 +268,7 @@ ABSTRACT_TYPE(/obj/item)
 
 				usr.client.tooltipHolder.showHover(src, tooltipParams)
 
-				tooltip_rebuild = 0
+				tooltip_rebuild = FALSE
 
 		usr.moused_over(src)
 
@@ -279,7 +279,7 @@ ABSTRACT_TYPE(/obj/item)
 
 	onMaterialChanged()
 		..()
-		tooltip_rebuild = 1
+		tooltip_rebuild = TRUE
 		if (istype(src.material))
 			burn_possible = src.material.getProperty("flammable") > 1 ? TRUE : FALSE
 			if (src.material.getMaterialFlags() & (MATERIAL_METAL | MATERIAL_CRYSTAL | MATERIAL_RUBBER))
@@ -799,6 +799,10 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 	//Click-drag tk stuff.
 /obj/item/proc/click_drag_tk(atom/over_object, src_location, over_location, over_control, params)
 	if(!src.anchored)
+		if(ismob(usr))
+			if (world.time < usr.next_click)
+				return
+			usr.next_click = world.time + max(src.click_delay, src.combat_click_delay)
 		if (iswraith(usr))
 			var/mob/living/intangible/wraith/W = usr
 			//Basically so poltergeists need to be close to an object to send it flying far...
@@ -872,6 +876,10 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 
 	was_stored?.storage.transfer_stored_item(src, get_turf(src), user = user)
 
+	if(src.two_handed && !user.can_hold_two_handed() && user.is_that_in_this(src)) // prevent accidentally donating weapons to your enemies
+		boutput(user, SPAN_ALERT("You don't have the hands to hold this item."))
+		return FALSE
+
 	var/mob/living/carbon/human/target
 	if (ishuman(user))
 		target = user
@@ -885,7 +893,7 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 					. = 1
 				else if (!user.r_hand)
 					user.u_equip(src)
-					. = user.put_in_hand(src, 0)
+					. = user.put_in_hand_or_drop(src, 0)
 				else if (!user.l_hand)
 					if (!target?.can_equip(src, SLOT_L_HAND))
 						user.show_text("You need a free hand to do that!", "blue")
@@ -893,7 +901,7 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 					else
 						user.swap_hand(1)
 						user.u_equip(src)
-						. = user.put_in_hand(src, 1)
+						. = user.put_in_hand_or_drop(src, 1)
 			else
 				if (user.l_hand == src)
 					.= 1
@@ -902,7 +910,7 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 					. = 1
 				else if (!user.l_hand)
 					user.u_equip(src)
-					. = user.put_in_hand(src, 1)
+					. = user.put_in_hand_or_drop(src, 1)
 				else if (!user.r_hand)
 					if (!target?.can_equip(src, SLOT_R_HAND))
 						user.show_text("You need a free hand to do that!", "blue")
@@ -910,7 +918,7 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 					else
 						user.swap_hand(0)
 						user.u_equip(src)
-						. = user.put_in_hand(src, 0)
+						. = user.put_in_hand_or_drop(src, 0)
 
 		else
 			user.show_text("You need a free hand to do that!", "blue")
@@ -1017,9 +1025,6 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 
 	chokehold?.attack_self(user)
 
-	return
-
-/obj/item/proc/talk_into(mob/M as mob, text, secure, real_name, lang_id)
 	return
 
 /obj/item/proc/moved(mob/user as mob, old_loc as turf)
@@ -1169,18 +1174,33 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 			src.Attackhand(M)
 	M.next_click = world.time + src.click_delay
 
-/obj/item/get_desc()
-	var/t
+/obj/item/get_desc(dist, mob/user)
+	var/size_desc
 	switch(src.w_class)
-		if (-INFINITY to W_CLASS_TINY) t = "tiny"
-		if (W_CLASS_SMALL) t = "small"
-		if (W_CLASS_POCKET_SIZED) t = "pocket-sized"
-		if (W_CLASS_NORMAL) t = "normal-sized"
-		if (W_CLASS_BULKY) t = "bulky"
-		if (W_CLASS_HUGE to INFINITY) t = "huge"
+		if (-INFINITY to W_CLASS_TINY) size_desc = "tiny"
+		if (W_CLASS_SMALL) size_desc = "small"
+		if (W_CLASS_POCKET_SIZED) size_desc = "pocket-sized"
+		if (W_CLASS_NORMAL) size_desc = "normal-sized"
+		if (W_CLASS_BULKY) size_desc = "bulky"
+		if (W_CLASS_HUGE to INFINITY) size_desc = "huge"
 	if (usr?.bioHolder?.HasEffect("clumsy") && prob(50))
-		t = "funny-looking"
-	return "It is \an [t] item."
+		size_desc = "funny-looking"
+	. = "It is \an [size_desc] item."
+
+	if ((src in user) && src.reagents?.total_volume)
+		var/temperature_desc = null
+		var/temperature = src.reagents.total_temperature
+		//you can't tell if something's too hot if you're immune to heat
+		if (temperature > user.scald_temp() && !user.is_heat_resistant())
+			temperature_desc = "<b>[SPAN_ALERT("scalding hot!")]</b>"
+		else if (temperature > T20C)
+			temperature_desc = "warm to the touch."
+		else if (temperature < user.frostburn_temp() && !user.is_cold_resistant())
+			temperature_desc = "<b>[SPAN_ALERT("freezing cold!")]</b>"
+		else if (temperature < T0C)
+			temperature_desc = "cold to the touch."
+		if (temperature_desc)
+			. += "<br>It's [temperature_desc]"
 
 /obj/item/attack_hand(mob/user)
 	var/obj/item/checkloc = src.loc
@@ -1330,7 +1350,6 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 	msgs.clear(target)
 	msgs.def_zone = def_zone
 	msgs.logs = list()
-	msgs.logc("attacks [constructTarget(target,"combat")] with [src] ([type], object name: [initial(name)])")
 
 	SEND_SIGNAL(target, COMSIG_MOB_ATTACKED_PRE, user, src)
 	if(SEND_SIGNAL(src, COMSIG_ITEM_ATTACK_PRE, target, user) & ATTACK_PRE_DONT_ATTACK)
@@ -1479,6 +1498,8 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 	if (is_special && src.special)
 		msgs = src.special.modify_attack_result(user, target, msgs)
 
+	msgs.logc("attacks [constructTarget(target,"combat")] with [src] ([type]) for [msgs.damage] [DAMAGE_TYPE_TO_STRING(msgs.damage_type)] damage")
+
 	msgs.flush()
 	src.add_fingerprint(user)
 	#ifdef COMSIG_ITEM_ATTACK_POST
@@ -1594,6 +1615,9 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 				if (M.client.tooltipHolder.transient)
 					if (M.client.tooltipHolder.transient.A == src)
 						M.client.tooltipHolder.transient.A = null
+
+		if(src.master)
+			SEND_SIGNAL(src.master, COMSIG_ITEM_ASSEMBLY_ON_PART_DISPOSAL, src)
 
 		return ..()
 	var/area/Ar = T.loc
@@ -1731,12 +1755,8 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 	return
 
 /obj/item/proc/pickup(mob/user)
-	#ifdef COMSIG_ITEM_PICKUP
 	SEND_SIGNAL(src, COMSIG_ITEM_PICKUP, user)
-	#endif
-	#ifdef COMSIG_MOB_PICKUP
 	SEND_SIGNAL(user, COMSIG_MOB_PICKUP, src)
-	#endif
 	src.material_on_pickup(user)
 	set_mob(user)
 	show_buttons()
@@ -1807,3 +1827,12 @@ ADMIN_INTERACT_PROCS(/obj/item, proc/admin_set_stack_amount)
 /// Override to implement custom logic for determining whether the item should be placed onto a target object
 /obj/item/proc/should_place_on(obj/target, params)
 	return TRUE
+
+///This will be called when the item is build into a /obj/item/assembly on get_help_message()
+/obj/item/proc/assembly_get_part_help_message(var/dist, var/mob/shown_user, var/obj/item/assembly/parent_assembly)
+	return
+
+///This will be called when the item is build into a /obj/item/assembly on get_admin_log_message(). Use this for additional information for logging.
+/obj/item/proc/assembly_get_admin_log_message(var/mob/user, var/obj/item/assembly/parent_assembly)
+	return
+
