@@ -417,7 +417,11 @@ var/global/list/default_channel_volumes = list(1, 1, 1, 0.5, 0.5, 1, 1, 1)
 		else
 			CRASH("Incorrect object in target list `[target[1]]` in playsound_global.")
 	else if(target == world)
-		clients = global.clients
+		clients = list()
+		for (var/client/C in global.clients)
+			if (istype(C.mob, /mob/living/carbon/human/tutorial))
+				continue
+			clients += C
 	else if(isnum(target))
 		clients = list()
 		for(var/client/client as anything in global.clients)
@@ -527,6 +531,7 @@ var/global/number_of_sound_generated = 0
 			if ("step_flipflop") soundin = pick(sounds_step_flipflop)
 			if ("step_heavyboots") soundin = pick(sounds_step_heavyboots)
 			if ("step_military") soundin = pick(sounds_step_military)
+			if ("step_snow") soundin = pick(sounds_step_snow)
 
 	if(islist(soundin))
 		soundin = pick(soundin)
@@ -791,6 +796,7 @@ proc/narrator_mode_sound_file(sound_file)
 /var/global/list/sounds_step_flipflop = 	list(sound('sound/misc/step/step_flipflop_1.ogg'),sound('sound/misc/step/step_flipflop_2.ogg'),sound('sound/misc/step/step_flipflop_3.ogg'))
 /var/global/list/sounds_step_heavyboots = 	list(sound('sound/misc/step/step_heavyboots_1.ogg'),sound('sound/misc/step/step_heavyboots_2.ogg'),sound('sound/misc/step/step_heavyboots_3.ogg'))
 /var/global/list/sounds_step_military = 	list(sound('sound/misc/step/step_military_1.ogg'),sound('sound/misc/step/step_military_2.ogg'),sound('sound/misc/step/step_military_3.ogg'),sound('sound/misc/step/step_military_4.ogg'))
+/var/global/list/sounds_step_snow = 	    list(sound('sound/misc/step/step_snow_01.ogg'),sound('sound/misc/step/step_snow_02.ogg'),sound('sound/misc/step/step_snow_03.ogg'))
 
 
 
@@ -810,6 +816,7 @@ proc/narrator_mode_sound_file(sound_file)
 		"pugg" = sound('sound/misc/talk/pugg.ogg'),	"pugg!" = sound('sound/misc/talk/pugg_exclaim.ogg'),"pugg?" = sound('sound/misc/talk/pugg_ask.ogg'), \
 		"roach" = sound('sound/misc/talk/roach.ogg'),	"roach!" = sound('sound/misc/talk/roach_exclaim.ogg'),"roach?" = sound('sound/misc/talk/roach_ask.ogg'), \
 		"cyborg" = sound('sound/misc/talk/cyborg.ogg'),	"cyborg!" = sound('sound/misc/talk/cyborg_exclaim.ogg'),"cyborg?" = sound('sound/misc/talk/cyborg_ask.ogg'), \
+		"cyborg_distorted" = sound('sound/misc/talk/cyborg_distorted.ogg'),	"cyborg_distorted!" = sound('sound/misc/talk/cyborg_exclaim_distorted.ogg'),"cyborg_distorted?" = sound('sound/misc/talk/cyborg_ask_distorted.ogg'), \
  		"radio" = sound('sound/misc/talk/radio.ogg')\
  		)
 

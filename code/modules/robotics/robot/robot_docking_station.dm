@@ -59,7 +59,7 @@ TYPEINFO(/obj/machinery/recharge_station)
 	return FALSE
 
 /obj/machinery/recharge_station/relaymove(mob/user as mob)
-	if (src.conversion_chamber && !isrobot(user))
+	if (src.conversion_chamber && !isrobot(user) && !isshell(user))
 		boutput(user, SPAN_ALERT("You're trapped inside!"))
 		return
 	src.go_out()
@@ -86,6 +86,10 @@ TYPEINFO(/obj/machinery/recharge_station)
 			src.set_broken()
 	. = ..()
 
+/obj/machinery/recharge_station/overload_act()
+	if (src.conversion_chamber)
+		return FALSE
+	return !src.set_broken()
 
 /obj/machinery/recharge_station/attack_hand(mob/user)
 	if (src.status & BROKEN)
@@ -240,7 +244,7 @@ TYPEINFO(/obj/machinery/recharge_station)
 			if (isunconscious(user))
 				return
 			else
-				user.visible_message("<b>[user]</b> moves [R] into  [src].")
+				user.visible_message("<b>[user]</b> moves [R] into [src].")
 		R.remove_pulling()
 		R.set_loc(src)
 		src.occupant = R
@@ -272,9 +276,10 @@ TYPEINFO(/obj/machinery/recharge_station)
 		actions.start(try_convert, user)
 
 /obj/machinery/recharge_station/receive_silicon_hotkey(mob/user)
-	. = ..()
+	if(..())
+		return
 
-	if (!isAI(user))
+	if (!isAI(user)) // this is AI only
 		return
 
 	var/mob/living/silicon/ai/mainframe = null

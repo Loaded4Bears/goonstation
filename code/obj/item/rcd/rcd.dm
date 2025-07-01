@@ -175,7 +175,7 @@ TYPEINFO(/obj/item/rcd)
 					src.matter += R.matter
 					R.matter = 0
 					qdel(R)
-				R.tooltip_rebuild = 1
+				R.tooltip_rebuild = TRUE
 				src.UpdateIcon()
 				playsound(src, 'sound/machines/click.ogg', 50, TRUE)
 				boutput(user, "\The [src] now holds [src.matter]/[src.max_matter] matter-units.")
@@ -257,7 +257,7 @@ TYPEINFO(/obj/item/rcd)
 		qdel(A)
 
 	proc/handle_floors_and_walls(atom/A, mob/user)
-		if (istype(A, /turf/simulated/floor))
+		if (istype(A, /turf/simulated/floor) || istype(A, /turf/simulated/space_phoenix_ice_tunnel))
 			src.do_rcd_action(user, A, "building a wall", matter_create_wall, time_create_wall, PROC_REF(handle_build_wall), src)
 			return
 
@@ -331,9 +331,9 @@ TYPEINFO(/obj/item/rcd)
 			src.do_rcd_action(user, A, "deconstructing \the [A]", matter_remove_wall, time_remove_wall, PROC_REF(do_deconstruct_wall), src)
 			return
 
-		if (istype(A, /turf/simulated/floor))
+		if (istype(A, /turf/simulated/floor) || istype(A, /turf/simulated/space_phoenix_ice_tunnel))
 			var/turf/simulated/floor/T = A
-			if(T.intact)
+			if(istype(T) && T.intact)
 				var/datum/material/mat = istext(T.default_material) ? getMaterial(T.default_material) : T.default_material
 				if(length(restricted_materials) && !(mat?.getID() in restricted_materials))
 					boutput(user, "Target object is not made of a material this RCD can deconstruct.")
@@ -457,6 +457,8 @@ TYPEINFO(/obj/item/rcd)
 			if (RCD_MODE_DECONSTRUCT)
 				if (length(restricted_materials) && !(A.material?.getID() in restricted_materials))
 					boutput(user, "Target object is not made of a material this RCD can deconstruct.")
+					return
+				if (istype(A, /turf/simulated/wall/auto/feather/strong))
 					return
 
 				handle_deconstruct(A, user)
@@ -651,7 +653,7 @@ TYPEINFO(/obj/item/rcd)
 		if (GetOverlayImage("mode"))
 			src.ClearSpecificOverlays("mode")
 		var/ammo_amt = 0
-		tooltip_rebuild = 1
+		tooltip_rebuild = TRUE
 		switch (round((src.matter / src.max_matter) * 100)) //is the round() necessary? yell at me if it isnt
 			if (10 to 34)
 				ammo_amt = 1

@@ -83,6 +83,7 @@ var/global/list/persistent_bank_purchaseables =	list(\
 			equip_success = 1
 			var/obj/I = new path(H.loc)
 			I.name = "[H.real_name][pick_string("trinkets.txt", "modifiers")] [I.name]"
+			I.real_name = I.name
 			I.quality = rand(5,80)
 			var/equipped = 0
 			if (H.back?.storage && H.equip_if_possible(I, SLOT_IN_BACKPACK))
@@ -477,7 +478,7 @@ var/global/list/persistent_bank_purchaseables =	list(\
 	missile_arrival
 		name = "Missile Arrival"
 		cost = 20000
-		path = /obj/item/tank/emergency_oxygen  // oh boy they'll need this if they are unlucky
+		path = /obj/item/tank/pocket/oxygen  // oh boy they'll need this if they are unlucky
 		icon = 'icons/obj/large/32x64.dmi'
 		icon_state = "arrival_missile"
 		icon_dir = SOUTH

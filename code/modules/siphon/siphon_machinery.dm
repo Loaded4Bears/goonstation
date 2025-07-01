@@ -379,7 +379,7 @@ ABSTRACT_TYPE(/obj/machinery/siphon)
 				if(length(satchel.contents) == satchel.maxitems || !length(src.contents)) incomplete = 0
 				boutput(usr, SPAN_NOTICE("You [incomplete ? "stop" : "finish"] filling \the [satchel]."))
 				satchel.UpdateIcon()
-				satchel.tooltip_rebuild = 1
+				satchel.tooltip_rebuild = TRUE
 				src.update_storage_bar()
 			else
 				boutput(usr, SPAN_NOTICE("\The [satchel] doesn't have any room to accept materials."))
@@ -663,6 +663,12 @@ ABSTRACT_TYPE(/obj/machinery/siphon)
 			if(paired_core)
 				src.build_net_update(null,SIGBUILD_REGULAR)
 			return
+
+	overload_act()
+		if (src.status & BROKEN)
+			return FALSE
+		src.shear_overload()
+		return TRUE
 
 	examine()
 		. = ..()

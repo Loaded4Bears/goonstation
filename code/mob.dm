@@ -1,3 +1,10 @@
+TYPEINFO(/mob)
+	start_listen_modifiers = list(LISTEN_MODIFIER_MOB_MODIFIERS)
+	start_listen_inputs = list(LISTEN_INPUT_EARS)
+	start_listen_languages = list(LANGUAGE_ENGLISH)
+	start_speech_modifiers = null
+	start_speech_outputs = list(SPEECH_OUTPUT_SPOKEN)
+
 /mob
 	density = 1
 	layer = MOB_LAYER
@@ -8,8 +15,17 @@
 
 	appearance_flags = KEEP_TOGETHER | PIXEL_SCALE | LONG_GLIDE
 
+	open_to_sound = FALSE
+
+	speech_verb_say = "says"
+	speech_verb_ask = "asks"
+	speech_verb_exclaim = "exclaims"
+	speech_verb_stammer = "stammers"
+	speech_verb_gasp = "gasps"
+
+	default_speech_output_channel = SAY_CHANNEL_OUTLOUD
+
 	var/tmp/datum/mind/mind
-	var/mob/boutput_relay_mob = null
 
 	var/datacore_id = null
 
@@ -23,8 +39,6 @@
 
 	var/atom/movable/screen/internals = null
 	var/atom/movable/screen/stamina_bar/stamina_bar = null
-
-	var/robot_talk_understand = 0
 
 	var/respect_view_tint_settings = FALSE
 	var/list/active_color_matrix = null
@@ -77,7 +91,6 @@
 	var/incrit = 0
 	var/timeofdeath = 0
 	var/fakeloss = 0
-	var/fakedead = 0
 	var/health = 100
 	var/max_health = 100
 	var/bodytemperature = T0C + 37
@@ -108,7 +121,6 @@
 	var/network_device = null
 	var/Vnetwork = null
 	var/lastDamageIconUpdate
-	var/say_language = "english"
 	var/literate = 1 // im liturit i kin reed an riet
 
 	var/list/movement_modifiers = list()
@@ -137,10 +149,7 @@
 
 	var/nodamage = 0
 
-	var/spellshield = 0
-
 	var/voice_name = "unidentifiable voice"
-	var/voice_message = null
 	var/oldname = null
 	var/mob/oldmob = null
 	var/datum/mind/oldmind = null
@@ -148,15 +157,8 @@
 	var/attack_alert = 0 // should we message admins when attacking another player?
 	var/suicide_alert = 0 // should we message admins when dying/dead?
 
-	var/speechverb_say = "says"
-	var/speechverb_ask = "asks"
-	var/speechverb_exclaim = "exclaims"
-	var/speechverb_stammer = "stammers"
-	var/speechverb_gasp = "gasps"
-	var/speech_void = 0
 	var/now_pushing = null //temp. var used for bump()
 	var/atom/movable/pushing = null //Keep track of something we may be pushing for speed reductions (GC Woes)
-	var/singing = 0 // true when last thing living mob said was sung, i.e. prefixed with "%""
 
 	var/movement_delay_modifier = 0 //Always applied.
 	var/restrain_time = 0 //we are restrained ; time at which we will be freed.  (using timeofday)
@@ -234,7 +236,6 @@
 	var/being_controlled = FALSE
 	///Lazy inited list of custom vomit behaviours from reagents, organs etc.
 	var/list/datum/vomit_behavior/vomit_behaviors = null
-
 	/// if this mob can interface with pod context menu by left clicking
 	var/can_interface_with_pods = TRUE
 
@@ -272,7 +273,6 @@
 
 	src.lastattacked = get_weakref(src) //idk but it fixes bug
 	render_target = "\ref[src]"
-	src.chat_text = new(null, src)
 
 	src.name_tag = new
 	src.update_name_tag()
@@ -341,9 +341,6 @@
 		var/area/AR = get_area(src)
 		AR?.mobs_not_in_global_mobs_list?.Remove(src)
 
-	qdel(chat_text)
-	chat_text = null
-
 	// this looks sketchy, but ghostize is fairly safe- we check for an existing ghost or NPC status, and only make a new ghost if we need to
 	src.ghost = src.ghostize()
 	if (src.ghost?.corpse == src)
@@ -353,7 +350,7 @@
 		LAZYLISTREMOVE(observers, TO)
 		TO.ghostize()
 
-	for(var/mob/m in src) //zoldorfs, aieyes, other terrible code
+	for(var/mob/m in src) //aieyes, other terrible code
 		if(m.observing == src)
 			m.stopObserving()
 		else
@@ -726,7 +723,7 @@
 
 			else if (tmob.a_intent == "help" && src.a_intent == "help" \
 				&& tmob.canmove && src.canmove \
-				&& !tmob.buckled && !src.buckled \
+				&& !tmob.buckled?.anchored && !src.buckled?.anchored \
 				&& !src.throwing && !tmob.throwing \
 				&& !(src.pulling && src.pulling.density) && !(tmob.pulling && tmob.pulling.density)) // mutual brohugs all around!
 				var/turf/oldloc = src.loc
@@ -745,6 +742,11 @@
 
 				src.set_loc(newloc)
 				tmob.set_loc(oldloc)
+
+				if(tmob.buckled)
+					tmob.buckled.set_loc(oldloc)
+				if(src.buckled)
+					src.buckled.set_loc(newloc)
 
 				if (istype(tmob.loc, /turf/space))
 					logTheThing(LOG_COMBAT, src, "trades places with (Help Intent) [constructTarget(tmob,"combat")], pushing them into space.")
@@ -777,8 +779,6 @@
 			victim.deliver_move_trigger("bump")
 			var/was_in_space = istype(victim.loc, /turf/space)
 			var/was_in_fire = locate(/atom/movable/hotspot) in victim.loc
-			if (victim.buckled && !victim.buckled.anchored)
-				step(victim.buckled, t)
 			if (!was_in_space && istype(victim.loc, /turf/space))
 				logTheThing(LOG_COMBAT, src, "pushes [constructTarget(victim,"combat")] into space.")
 			else if (!was_in_fire && (locate(/atom/movable/hotspot) in victim.loc))
@@ -795,7 +795,6 @@
 			var/list/pulling = list()
 			if ((BOUNDS_DIST(old_loc, src.pulling) > 0 && BOUNDS_DIST(src, src.pulling) > 0) || src.pulling == src) // fucks sake
 				src.remove_pulling()
-				//hud.update_pulling() // FIXME
 			else
 				pulling += src.pulling
 			for (var/obj/item/grab/G in src.equipped_list(check_for_magtractor = 0))
@@ -908,6 +907,12 @@
 	src.a_intent = intent
 	if (src.equipped()?.item_function_flags & USE_INTENT_SWITCH_TRIGGER)
 		src.equipped().intent_switch_trigger(src)
+
+/// Set movement intent variable on a mob
+/mob/proc/set_m_intent(intent)
+	if (!intent)
+		return
+	src.m_intent = intent
 
 // medals
 
@@ -1216,12 +1221,10 @@
 
 /mob/proc/death(gibbed = FALSE)
 	SHOULD_CALL_PARENT(TRUE)
-	SEND_SIGNAL(src, COMSIG_MOB_DEATH)
+	SEND_SIGNAL(src, COMSIG_MOB_DEATH, gibbed)
 	//Traitor's dead! Oh no!
 	if (src.mind && src.mind.special_role && !istype(get_area(src),/area/afterlife))
 		message_admins(SPAN_ALERT("Antagonist [key_name(src)] ([src.mind.special_role]) died at [log_loc(src)]."))
-	//if(src.mind && !gibbed)
-	//	src.mind.death_icon = getFlatIcon(src,SOUTH) crew photo stuff
 	if(src.mind && (src.mind.damned || src.mind.karma < -200))
 		src.damn()
 		return
@@ -1230,8 +1233,10 @@
 		src.suicide_alert = 0
 	if(src.ckey && !src.mind?.get_player()?.dnr)
 		respawn_controller.subscribeNewRespawnee(src.ckey)
-	//stop piloting pods or whatever
+	// stop piloting pods or whatever
 	src.override_movement_controller = null
+	// stop pulling shit!!
+	src.remove_pulling()
 
 
 /mob/proc/restrained()
@@ -1484,18 +1489,25 @@
 	if (src.mind.last_memory_time + 10 <= world.time) // leaving it using this var cause vOv
 		src.mind.last_memory_time = world.time // why not?
 
-		var/new_rights = input(usr, "Change what you will say with the Say Miranda Rights verb.", "Set Miranda Rights", src.mind.get_miranda() || DEFAULT_MIRANDA) as null|text
-		if (!new_rights || new_rights == src.mind.miranda)
-			src.show_text("Miranda rights not changed.", "red")
-			return
+		var/choice = tgui_alert(usr, "Edit Miranda's rights?", "Miranda Rights", list("Edit", "Reset", "Cancel"))
+		switch(choice)
+			if("Edit")
+				var/new_rights = tgui_input_text(usr, "Change what you will say with the Say Miranda Rights verb.", "Set Miranda Rights", src.mind.get_miranda() || DEFAULT_MIRANDA)
+				if (!new_rights || new_rights == src.mind.miranda)
+					src.show_text("Miranda rights not changed.", "red")
+					return
 
-		new_rights = copytext(new_rights, 1, MAX_MESSAGE_LEN)
-		new_rights = sanitize(strip_html(new_rights))
+				new_rights = copytext(new_rights, 1, MAX_MESSAGE_LEN)
+				new_rights = sanitize(strip_html(new_rights))
 
-		src.mind.set_miranda(new_rights)
+				src.mind.set_miranda(new_rights)
 
-		logTheThing(LOG_TELEPATHY, src, "has set their miranda rights quote to: [src.mind.miranda]")
-		src.show_text("Miranda rights set to \"[src.mind.miranda]\"", "blue")
+				logTheThing(LOG_TELEPATHY, src, "has set their miranda rights quote to: [src.mind.miranda]")
+				src.show_text("Miranda rights set to \"[src.mind.miranda]\"", "blue")
+			if("Reset")
+				src.mind.set_miranda(null)
+				logTheThing(LOG_TELEPATHY, src, "has reset their miranda rights.")
+				src.show_text("Miranda rights reset.", "blue")
 
 /mob/verb/abandon_mob()
 	set name = "Respawn"
@@ -1690,7 +1702,7 @@
 
 /// Adds a 20-length color matrix to the mob's list of color matrices
 /// cmatrix is the color matrix (must be a 16-length list!), label is the string to be used for dupe checks and removal
-/mob/proc/apply_color_matrix(list/cmatrix, label)
+/mob/proc/apply_color_matrix(list/cmatrix, label, animate = 0)
 	if (!cmatrix || !label)
 		return
 
@@ -1699,10 +1711,10 @@
 
 	LAZYLISTADDASSOC(src.color_matrices, label, cmatrix)
 
-	src.update_active_matrix()
+	src.update_active_matrix(animate)
 
 /// Removes whichever matrix is associated with the label. Must be a string!
-/mob/proc/remove_color_matrix(label)
+/mob/proc/remove_color_matrix(label, animate = 0)
 	if (!label || !length(src.color_matrices))
 		return
 
@@ -1713,11 +1725,12 @@
 	else
 		LAZYLISTREMOVE(src.color_matrices, label)
 
-	src.update_active_matrix()
+	src.update_active_matrix(animate)
 
 /// Multiplies all of the mob's color matrices together and puts the result into src.active_color_matrix
 /// This matrix will be applied to the mob at the end of this proc, and any time the client logs in
-/mob/proc/update_active_matrix()
+/// If animate is present, animate the transition for that many DS
+/mob/proc/update_active_matrix(animate = 0)
 	if (!length(src.color_matrices))
 		src.active_color_matrix = null
 	else
@@ -1732,7 +1745,10 @@
 				else
 					color_matrix_2_apply = mult_color_matrix(color_matrix_2_apply, src.color_matrices[cmatrix])
 			src.active_color_matrix = color_matrix_2_apply
-	src.client?.set_color(src.active_color_matrix, src.respect_view_tint_settings)
+	if (animate)
+		src.client?.animate_color(src.active_color_matrix, animate, respect_view_tint_settings = src.respect_view_tint_settings)
+	else
+		src.client?.set_color(src.active_color_matrix, src.respect_view_tint_settings)
 
 /mob/proc/adjustBodyTemp(actual, desired, incrementboost, divisor)
 	var/temperature = actual
@@ -1753,6 +1769,20 @@
 
 	return temperature
 
+/// Change the mob's body temperature without leaving the specified bounds
+/mob/proc/changeBodyTemp(var/amount, var/min_temp = 0 KELVIN, var/max_temp = INFINITY)
+	if(amount <= 0)
+		if(src.bodytemperature <= min_temp) // Keep body temp as is if below min
+			return
+		src.bodytemperature += amount
+		if(src.bodytemperature < min_temp)
+			src.bodytemperature = min_temp
+	else
+		if(src.bodytemperature >= max_temp)  // Keep body temp as is if above max
+			return
+		src.bodytemperature += amount
+		if(src.bodytemperature > max_temp)
+			src.bodytemperature = max_temp
 
 //Gets rid of the mob without all the messy fuss of a gib
 /mob/proc/remove()
@@ -2548,6 +2578,22 @@
 		setalive(src)
 	src.update_body()
 
+/// Attempt to bring a mob just out of crit without immediately dropping back into crit
+/mob/proc/stabilize()
+	SHOULD_CALL_PARENT(TRUE)
+	src.losebreath = min(src.losebreath, 2)
+	src.delStatus("burning")
+	src.delStatus("radiation")
+	src.take_radiation_dose(-INFINITY)
+	src.change_eye_blurry(-INFINITY)
+	src.take_eye_damage(-INFINITY)
+	src.take_eye_damage(-INFINITY, 1)
+	src.take_ear_damage(-INFINITY)
+	src.take_ear_damage(-INFINITY, 1)
+	src.take_brain_damage(-(max(src.get_brain_damage()-10, 0))) // leave them with up to 10 brain damage
+	src.health = max(src.health, 10)
+	src.update_body()
+
 /mob/proc/shock(var/atom/origin, var/wattage, var/zone, var/stun_multiplier = 1, var/ignore_gloves = 0)
 	return 0
 
@@ -2773,6 +2819,8 @@
 	return mobs
 
 /mob/get_examine_tag(mob/examiner)
+	if (GET_ATOM_PROPERTY(src, PROP_MOB_NOEXAMINE) >= 3)
+		return null
 	return src.name_tag
 
 /mob/proc/protected_from_space()
@@ -3447,3 +3495,12 @@
 	if (src.bioHolder?.mobAppearance)
 		return src.bioHolder.mobAppearance.s_tone
 	return "#042069"
+
+/mob/proc/update_movement_modifiers()
+	process_movespeed_update()
+
+/mob/proc/scald_temp()
+	return src.base_body_temp + (src.temp_tolerance * 4)
+
+/mob/proc/frostburn_temp()
+	return src.base_body_temp - (src.temp_tolerance * 4)

@@ -1168,10 +1168,16 @@ TYPEINFO(/obj/machinery/door/airlock)
 	. = ..()
 	src.deconstruct_flags &= ~DECON_NO_ACCESS //well, ya got it fixed, somehow
 
-/obj/machinery/door/airlock/receive_silicon_hotkey(var/mob/user)
-	..()
+/obj/machinery/door/airlock/overload_act(mob/user)
+	if (src.hardened)
+		return FALSE
+	if (src.secondsMainPowerLost > 0)
+		return FALSE
+	src.loseMainPower()
+	return TRUE
 
-	if (!isAI(user) && !issilicon(user))
+/obj/machinery/door/airlock/receive_silicon_hotkey(var/mob/user)
+	if(..())
 		return
 
 	if (src.aiControlDisabled == 1) return

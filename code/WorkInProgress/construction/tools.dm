@@ -119,14 +119,14 @@
 			return
 
 		src.add_dialog(user)
-		var/t = "<TT><B>Turret Control Panel</B><BR><B>Controlled turrets:</B> [turrets.len] (<A href='?src=\ref[src];rescan=1'>Rescan</a>)<HR>"
+		var/t = "<TT><B>Turret Control Panel</B><BR><B>Controlled turrets:</B> [turrets.len] (<A href='byond://?src=\ref[src];rescan=1'>Rescan</a>)<HR>"
 
 		if(src.locked && !can_access_remotely(user))
 			t += "<I>(Swipe ID card to unlock control panel.)</I><BR>"
 		else
-			t += text("Turrets [] - <A href='?src=\ref[];toggleOn=1'>[]?</a><br><br>", src.enabled?"activated":"deactivated", src, src.enabled?"Disable":"Enable")
-			t += text("Currently firing at <A href='?src=\ref[];firesAt=1'>[]</a><br><br>", src, firesat)
-			t += text("Currently set for [] - <A href='?src=\ref[];toggleLethal=1'>Change to []?</a><br><br>", src.lethal?"lethal":"stun repeatedly", src,  src.lethal?"Stun repeatedly":"Lethal")
+			t += text("Turrets [] - <A href='byond://?src=\ref[];toggleOn=1'>[]?</a><br><br>", src.enabled?"activated":"deactivated", src, src.enabled?"Disable":"Enable")
+			t += text("Currently firing at <A href='byond://?src=\ref[];firesAt=1'>[]</a><br><br>", src, firesat)
+			t += text("Currently set for [] - <A href='byond://?src=\ref[];toggleLethal=1'>Change to []?</a><br><br>", src.lethal?"lethal":"stun repeatedly", src,  src.lethal?"Stun repeatedly":"Lethal")
 
 		user.Browse(t, "window=turretid")
 		onclose(user, "turretid")
@@ -533,6 +533,19 @@ TYPEINFO(/obj/item/room_planner)
 		"lead gray" = 'icons/turf/walls/lead/gray.dmi',
 		"lead white" = 'icons/turf/walls/lead/white.dmi',
 		"ancient smooth" = 'icons/turf/walls/ancient_smooth.dmi',
+		"tempus green" = 'icons/turf/walls/unused/walls_tempus-green.dmi',
+		"tempus white" = 'icons/turf/walls/unused/walls_tempus-white.dmi',
+		"black red" = 'icons/turf/walls/supernorn/blackred.dmi',
+		"orange" = 'icons/turf/walls/supernorn/orange.dmi',
+		"yellow" = 'icons/turf/walls/supernorn/yellow.dmi',
+		"beehive" = 'icons/turf/walls/beehive.dmi',
+		"hedge" = 'icons/turf/walls/hedge.dmi',
+		"ice" = 'icons/turf/walls/ice.dmi',
+		"mossy rock" = 'icons/turf/walls/mossy_rock.dmi',
+		"panel" = 'icons/turf/walls/panel.dmi',
+		"marsoutpost" = 'icons/turf/walls/marsoutpost.dmi',
+		"precursor" = 'icons/turf/walls/precursor.dmi',
+
 	)
 	var/list/wallmods = list(
 		"diner" = "oldr-",
@@ -548,6 +561,19 @@ TYPEINFO(/obj/item/room_planner)
 		"lead gray" = "leadg-",
 		"lead white" = "leadw-",
 		"ancient smooth" = "interior-",
+		"tempus green" = "",
+		"tempus white" = "",
+		"black red" = "norn-BR-",
+		"orange" = "norn-O-",
+		"yellow" = "norn-Y-",
+		"beehive" = "bee-",
+		"hedge" = "hedge-",
+		"ice" = "ice-",
+		"mossy rock" = "rock-",
+		"panel" = "interior-",
+		"marsoutpost" = "interior-",
+		"precursor" = "interior-",
+
 	)
 
 	attack_self(mob/user as mob)

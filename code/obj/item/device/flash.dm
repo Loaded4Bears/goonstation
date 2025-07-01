@@ -320,7 +320,7 @@ TYPEINFO(/obj/item/device/flash)
 	user.show_text("There seems to be something preventing [M] from revolting.", "red")
 
 /obj/item/device/flash/proc/process_burnout(mob/user as mob)
-	tooltip_rebuild = 1
+	tooltip_rebuild = TRUE
 	if (prob(max(0,((use-5)*10) + burn_mod)))
 		status = 0
 		boutput(user, SPAN_ALERT("<b>The bulb has burnt out!</b>"))
@@ -350,11 +350,11 @@ TYPEINFO(/obj/item/device/flash)
 	else
 		return ..()
 
-/obj/item/device/flash/is_detonator_attachment()
-	return 1
 
-/obj/item/device/flash/detonator_act(event, var/obj/item/assembly/detonator/det)
+/obj/item/device/flash/detonator_act(event, var/obj/item/canbomb_detonator/det)
 	switch (event)
+		if ("attach")
+			det.initial_wire_functions += src
 		if ("pulse")
 			det.attachedTo.visible_message("<span class='bold' style='color: #B7410E;'>\The [src] discharges.</span>")
 			for (var/mob/living/M in viewers(4, det.attachedTo))
